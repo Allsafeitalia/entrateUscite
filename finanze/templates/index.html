@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Finanze</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/styles.css') }}" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Dashboard Finanze</h1>
+
+        <!-- Form per selezionare l'intervallo di date -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <form method="POST">
+                    <div class="form-row">
+                        <div class="form-group col-md-3">
+                            <label for="start_date">Data Inizio</label>
+                            <input type="date" class="form-control" id="start_date" name="start_date" value="{{ start_date }}" required>
+                        </div>
+                        <div class="form-group col-md-3">
+                            <label for="end_date">Data Fine</label>
+                            <input type="date" class="form-control" id="end_date" name="end_date" value="{{ end_date }}" required>
+                        </div>
+                        <div class="form-group col-md-3 align-self-end">
+                            <button type="submit" class="btn btn-primary">Filtra</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <div class="card text-white bg-success">
+                    <div class="card-body">
+                        <h5 class="card-title">Saldo Attuale</h5>
+                        <p class="card-text">€ {{ saldo }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card text-white bg-info">
+                    <div class="card-body">
+                        <h5 class="card-title">Variazione Percentuale</h5>
+                        <p class="card-text">{{ variazione_percentuale }}%</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Form per aggiungere transazioni -->
+        <div class="row mb-4">
+            <div class="col-md-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Aggiungi Transazione</h5>
+                        <form action="{{ url_for('aggiungi') }}" method="POST">
+                            <div class="form-row">
+                                <div class="form-group col-md-2">
+                                    <label for="data">Data</label>
+                                    <input type="date" class="form-control" id="data" name="data" required>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label for="tipo">Tipo</label>
+                                    <select class="form-control" id="tipo" name="tipo" required>
+                                        <option value="entrata">Entrata</option>
+                                        <option value="uscita">Uscita</option>
+                                    </select>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label for="descrizione">Descrizione</label>
+                                    <input type="text" class="form-control" id="descrizione" name="descrizione" required>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label for="importo">Importo (€)</label>
+                                    <input type="number" step="0.01" class="form-control" id="importo" name="importo" required>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label for="store">Store</label>
+                                    <input type="text" class="form-control" id="store" name="store" required>
+                                </div>
+                                <div class="form-group col-md-2">
+                                    <label for="quantità">Quantità</label>
+                                    <input type="number" class="form-control" id="quantità" name="quantità" value="1">
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Aggiungi</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grafici -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <canvas id="entrateUsciteChart"></canvas>
+            </div>
+            <div class="col-md-6">
+                <canvas id="pezziPerStoreChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Tabella delle transazioni -->
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Descrizione</th>
+                    <th>Importo (€)</th>
+                    <th>Store</th>
+                    <th>Quantità</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transazione in transazioni %}
+                <tr class="{{ 'text-success' if transazione.tipo == 'entrata' else 'text-danger' }}">
+                    <td>{{ transazione.data }}</td>
+                    <td>{{ transazione.tipo }}</td>
+                    <td>{{ transazione.descrizione }}</td>
+                    <td>{{ transazione.importo }}</td>
+                    <td>{{ transazione.store }}</td>
+                    <td>{{ transazione.quantità }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Tabella dei pezzi acquistati per mese -->
+        <h2 class="mt-5">Pezzi Acquistati per Mese</h2>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Prodotto</th>
+                    <th>Mese</th>
+                    <th>Quantità</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prodotto, mesi in pezzi_per_mese.items() %}
+                {% for mese, quantità in mesi.items() %}
+                <tr>
+                    <td>{{ prodotto }}</td>
+                    <td>{{ mese }}</td>
+                    <td>{{ quantità }}</td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <!-- Tabella dei prezzi minori per prodotto e negozio -->
+        <h2 class="mt-5">Prezzo Minore per Prodotto e Negozio</h2>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <th>Prodotto</th>
+                    <th>Negozio</th>
+                    <th>Prezzo Minore (€)</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prodotto, info in prezzo_minore.items() %}
+                <tr>
+                    <td>{{ prodotto }}</td>
+                    <td>{{ info.store }}</td>
+                    <td>{{ info.prezzo }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        const entrateUsciteData = {
+            labels: ['Entrate', 'Uscite'],
+            datasets: [{
+                label: 'Entrate vs Uscite',
+                data: [{{ dati_grafici.entrate }}, {{ dati_grafici.uscite }}],
+                backgroundColor: ['#28a745', '#dc3545'],
+            }]
+        };
+        const entrateUsciteConfig = {
+            type: 'bar',
+            data: entrateUsciteData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Entrate vs Uscite'
+                    }
+                }
+            },
+        };
+        const entrateUsciteChart = new Chart(
+            document.getElementById('entrateUsciteChart'),
+            entrateUsciteConfig
+        );
+
+        const pezziPerStoreData = {
+            labels: [{% for store in dati_grafici.pezzi_per_store.keys() %}'{{ store }}',{% endfor %}],
+            datasets: [{
+                label: 'Pezzi per Store',
+                data: [{% for pezzi in dati_grafici.pezzi_per_store.values() %}{{ pezzi }},{% endfor %}],
+                backgroundColor: '#007bff',
+            }]
+        };
+        const pezziPerStoreConfig = {
+            type: 'bar',
+            data: pezziPerStoreData,
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Pezzi per Store'
+                    }
+                }
+            },
+        };
+        const pezziPerStoreChart = new Chart(
+            document.getElementById('pezziPerStoreChart'),
+            pezziPerStoreConfig
+        );
+    </script>
+</body>
+</html>
